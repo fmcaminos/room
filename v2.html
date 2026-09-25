@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Escape Room - Ecos de La Paz: Misión Paraná</title>
+<style>
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: radial-gradient(circle at top, #2b4c59, #0f232a, #081217);
+    color: #eaf4f4;
+    min-height: 100vh;
+  }
+  .container { width: min(1000px, 94%); margin: auto; padding: 25px 0 50px; }
+  .screen { display: none; }
+  .screen.active { display: block; }
+  .card {
+    background: rgba(15, 35, 42, 0.85);
+    border: 1px solid rgba(86, 163, 166, 0.3);
+    border-radius: 20px;
+    padding: 28px;
+    margin-top: 20px;
+    box-shadow: 0 12px 35px rgba(0,0,0,0.5);
+    backdrop-filter: blur(8px);
+  }
+  h1 { font-size: clamp(1.8rem, 5vw, 3.2rem); margin: 10px 0; color: #a4e5d9; text-transform: uppercase; letter-spacing: 1px; }
+  h2 { color: #81d4fa; margin-bottom: 12px; font-size: 1.4rem; }
+  h3 { color: #e0f7fa; }
+  .subtitle { font-size: 1.2rem; opacity: .9; color: #b2ebf2; }
+  .mission {
+    border-left: 5px solid #26a69a;
+    padding: 16px 20px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 8px;
+    line-height: 1.6;
+    margin: 15px 0;
+  }
+  
+  /* RECUADRO DE ORALIDAD DESTACADO (ARRIBA Y MÁS GRANDE) */
+  .oral-box-top {
+    background: rgba(255, 183, 77, 0.18);
+    border: 2px dashed #ffb74d;
+    padding: 20px 24px;
+    border-radius: 14px;
+    margin: 15px 0 25px 0;
+    font-size: 1.15rem;
+    line-height: 1.6;
+    box-shadow: 0 4px 20px rgba(255, 183, 77, 0.15);
+  }
+  .oral-box-top strong {
+    color: #ffe0b2;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.25rem;
+    margin-bottom: 8px;
+  }
+
+  button {
+    border: 0;
+    border-radius: 12px;
+    padding: 13px 20px;
+    margin: 8px 6px 0 0;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1rem;
+    background: #26a69a;
+    color: #041217;
+    transition: transform .15s, background .15s, opacity .15s;
+  }
+  button:hover:not(:disabled) { transform: translateY(-2px); background: #80cbc4; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  button.secondary { background: #546e7a; color: #ffffff; }
+  button.danger { background: #e57373; color: #ffffff; }
+  
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  /* CRONÓMETRO FLOTANTE Y SIEMPRE VISIBLE */
+  .floating-timer {
+    position: fixed;
+    top: 15px;
+    right: 20px;
+    z-index: 9000;
+    font-size: 1.6rem;
+    font-weight: bold;
+    background: rgba(4, 12, 15, 0.92);
+    border: 2px solid #ff5252;
+    color: #ff5252;
+    padding: 10px 22px;
+    border-radius: 50px;
+    min-width: 120px;
+    text-align: center;
+    letter-spacing: 2px;
+    font-family: monospace;
+    box-shadow: 0 4px 25px rgba(255, 82, 82, 0.4);
+    backdrop-filter: blur(6px);
+  }
+
+  .progress-wrap {
+    background: rgba(255,255,255,0.1);
+    border-radius: 30px;
+    height: 14px;
+    overflow: hidden;
+    margin: 18px 0;
+  }
+  .progress { height: 100%; width: 14.28%; background: #26a69a; transition: width .4s; }
+  .station { display: none; }
+  .station.active { display: block; }
+  .option {
+    display: block;
+    width: 100%;
+    text-align: left;
+    margin: 10px 0;
+    padding: 14px 18px;
+    background: rgba(255,255,255,0.06);
+    color: white;
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 10px;
+    font-size: 1rem;
+    line-height: 1.4;
+  }
+  .option:hover:not(:disabled) { background: rgba(255,255,255,0.15); }
+  .option.selected { outline: 3px solid #80cbc4; }
+  .option.correct { background: #2e7d32 !important; border-color: #66bb6a; }
+  .option.wrong { background: #c62828 !important; border-color: #ef5350; }
+  .clue {
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(128, 203, 196, 0.3);
+    padding: 18px;
+    border-radius: 12px;
+    margin: 18px 0;
+    line-height: 1.6;
+  }
+  .feedback { min-height: 30px; font-weight: bold; margin-top: 12px; font-size: 1rem; }
+  
+  /* OVERLAY / CARTEL DE ALARMA SUPERPUESTO */
+  #alarmOverlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 9999;
+    background: rgba(0, 0, 0, 0.88);
+    backdrop-filter: blur(10px);
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 20px;
+  }
+  #alarmOverlay.active {
+    display: flex;
+    animation: alarmPulse 0.8s infinite alternate;
+  }
+  @keyframes alarmPulse {
+    0% {
+      background: rgba(180, 0, 0, 0.88);
+      box-shadow: inset 0 0 100px #ff0000;
+    }
+    100% {
+      background: rgba(60, 0, 0, 0.94);
+      box-shadow: inset 0 0 30px #800000;
+    }
+  }
+  .alarm-box {
+    background: #0d0000;
+    border: 4px solid #ff1744;
+    border-radius: 20px;
+    padding: 40px;
+    max-width: 650px;
+    width: 90%;
+    box-shadow: 0 0 50px #ff1744;
+    animation: alarmBorder 0.8s infinite alternate;
+  }
+  @keyframes alarmBorder {
+    0% { border-color: #ff1744; box-shadow: 0 0 50px #ff1744; }
+    100% { border-color: #ff9100; box-shadow: 0 0 30px #ff9100; }
+  }
+  .alarm-title {
+    font-size: 2.2rem;
+    color: #ff5252;
+    margin-bottom: 15px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-weight: 900;
+  }
+  .alarm-timer-box {
+    font-size: 4rem;
+    font-weight: bold;
+    font-family: monospace;
+    color: #ffe500;
+    text-shadow: 0 0 20px #ffe500;
+    margin: 20px 0;
+  }
+  .alarm-msg {
+    font-size: 1.2rem;
+    color: #ffffff;
+    line-height: 1.6;
+  }
+
+  .code-box {
+    font-size: 2.5rem;
+    letter-spacing: 12px;
+    text-align: center;
+    background: #040c0f;
+    border: 2px dashed #26a69a;
+    color: #80cbc4;
+    padding: 20px;
+    border-radius: 15px;
+    margin: 25px 0;
+    font-family: monospace;
+  }
+  .evidence {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 8px;
+    margin-top: 15px;
+  }
+  .badge {
+    padding: 10px;
+    border-radius: 10px;
+    background: rgba(0,0,0,0.35);
+    border: 1px solid rgba(255,255,255,0.1);
+    text-align: center;
+    font-size: 0.9rem;
+  }
+  .success { color: #81c784; }
+  .fail { color: #e57373; }
+  .small { font-size: .9rem; opacity: .8; }
+  ul { margin-left: 20px; line-height: 1.6; }
+</style>
+</head>
+
+<body>
+
+<!-- CRONÓMETRO REGRESIVO FLOTANTE -->
+<div class="floating-timer" id="floatingTimer">30:00</div>
+
+<!-- CARTEL SUPERPUESTO DE ALARMA CON BLOQUEO TOTAL -->
+<div id="alarmOverlay">
+  <div class="alarm-box">
+    <div style="font-size:4rem; margin-bottom:10px;">🚨 ⚠️ 🚨</div>
+    <div class="alarm-title">¡SISTEMA BLOQUEADO!</div>
+    <div class="alarm-msg">
+      Has seleccionado una opción incorrecta.<br>
+      Se ha activado el protocolo de seguridad ambiental.<br>
+      <strong>Navegación y respuestas inhabilitadas.</strong> Relean el texto en equipo.
+    </div>
+    <div class="alarm-timer-box" id="overlayTimer">20</div>
+    <div style="font-size:0.95rem; color:#ffb74d;">TIEMPO RESTANTE PARA EL DESBLOQUEO DEL SISTEMA</div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- INICIO -->
+  <section id="start" class="screen active">
+    <div class="card">
+      <h1>Ecos de La Paz: Misión Paraná</h1>
+      <p class="subtitle">Escape Room de MARATÓN DE LECTURA - Área Cs. Exactas y Matemática</p>
+      <p class="subtitle"><strong>ESA N.º 3 Dr. E. Huber (7 Estaciones)</strong></p>
+
+      <div class="mission">
+        <strong>SINOPSIS Y DESAFÍO COMUNITARIO:</strong><br>
+        En el marco de la Maratón de Lectura en La Paz (Entre Ríos), descubrimos que la estación de monitoreo ambiental del riacho Cabayú Cuatiá, la cuenca termal y las barrancas del Parque Botánico ha sufrido un bloqueo en su servidor central.
+        <br><br>
+        Un microplástico emergente y la acumulación de efluentes amenazan el ecosistema acuático del río Paraná. Para desactivar la alerta y liberar el plan de remediación ambiental, los equipos de estudiantes deberán recorrer <strong>7 estaciones de trabajo</strong> integrando la <strong>lectura atenta, la oralidad en equipo y el cálculo matemático ambiental</strong>.
+      </div>
+
+      <h2>🎯 Dinámica del Escape Room</h2>
+      <ul>
+        <li><strong>Formato de trabajo:</strong> Equipos de estudiantes.</li>
+        <li><strong>Lectura y Oralidad Primero:</strong> En cada estación, lo primero a realizar es la lectura y consigna de oratoria grupal.</li>
+        <li><strong>Opciones por Estación:</strong> Cada estación cuenta con <strong>5 opciones de respuesta reordenadas</strong>.</li>
+        <li><strong>Bloqueo Total por Error:</strong> Si se elige una opción incorrecta, se activará una **alarma visual superpuesta** que bloqueará completamente la pantalla y la navegación por **20 segundos**.</li>
+        <li><strong>Meta:</strong> Obtener los 7 dígitos del nuevo código maestro antes de que expiren los 30 minutos.</li>
+      </ul>
+
+      <p style="margin-top:20px;"><strong>⏱️ Tiempo límite estricto: 30:00 minutos.</strong></p>
+      <button onclick="startGame()">🚀 Iniciar Maratón y Desafío</button>
+    </div>
+  </section>
+
+  <!-- JUEGO -->
+  <section id="game" class="screen">
+    <div class="topbar">
+      <div>
+        <strong>ECOS DE LA PAZ • ESA 3 HUBER</strong>
+        <div class="small" id="stationLabel">Estación 1 de 7</div>
+      </div>
+    </div>
+
+    <div class="progress-wrap"><div class="progress" id="progress"></div></div>
+
+    <!-- ESTACIÓN 1 -->
+    <div id="station1" class="station active card">
+      <h2>📍 Estación 1: La Biología de las Barrancas y el Dorado</h2>
+
+      <div class="oral-box-top">
+        <strong>🗣️ Desafío Prioritario de Oralidad y Lectura:</strong>
+        Un integrante del equipo debe leer en voz alta la ficha técnica de la estación con entonación de informe radial periodístico. Luego, respondan grupalmente: ¿Cuántas hectáreas del área muestreada conservan su cubierta vegetal nativa intacta?
+      </div>
+
+      <p>Lean atentamente la ficha técnica elaborada por ambientalistas paceños sobre la fauna de las barrancas y del lecho del río Paraná:</p>
+
+      <div class="clue">
+        <p><strong>Informe Ecológico - Paraje Puerto Márquez / Cabayú Cuatiá:</strong><br>
+        El Dorado (<em>Salminus brasiliensis</em>) y el Surubí son peces autóctonos predadores del curso del Paraná. Sin embargo, la alteración de los juncales y la pesca sin devolución han reducido fuertemente su población reproductiva. En la vegetación de las barrancas vivas de La Paz coexisten especies de aves migratorias e insectos polinizadores. De las 200 hectáreas muestreadas en la zona costera paceña, el <strong>35%</strong> presenta signos de erosión severa por desmonte, mientras que el resto mantiene cubierta vegetal nativa protectora.</p>
+      </div>
+
+      <p><strong>Enigma Matemático:</strong> El número de hectáreas protegidas te dará la pista. El primer dígito del código corresponde a la <strong>decena</strong> de ese valor (Ejemplo: si la respuesta fuera 140 hectáreas, la decena es 4).</p>
+
+      <button class="option" onclick="answer(1,'6',this)">A) 160 hectáreas protegidas → Dígito de las decenas: 6</button>
+      <button class="option" onclick="answer(1,'7',this)">B) 70 hectáreas en total → Dígito de las decenas: 7</button>
+      <button class="option" onclick="answer(1,'3',this)">C) 130 hectáreas protegidas → Dígito de las decenas: 3</button>
+      <button class="option" onclick="answer(1,'5',this)">D) 150 hectáreas protegidas → Dígito de las decenas: 5</button>
+      <button class="option" onclick="answer(1,'4',this)">E) 140 hectáreas protegidas → Dígito de las decenas: 4</button>
+      <div id="feedback1" class="feedback"></div>
+    </div>
+
+    <!-- ESTACIÓN 2 -->
+    <div id="station2" class="station card">
+      <h2>🌊 Estación 2: El Poema del Cabayú Cuatiá</h2>
+
+      <div class="oral-box-top">
+        <strong>🗣️ Desafío Prioritario de Lectura Dialógica:</strong>
+        Dos estudiantes deben recitar la estrofa del poema intercalando versos en voz alta. Debatan en grupo: ¿Qué recurso expresivo predomina en "vena parda de La Paz" y cuál es la problemática matemática oculta?
+      </div>
+
+      <p>Declamación colectiva y análisis de lírica regional entrerriana:</p>
+
+      <div class="clue">
+        <p><em>“Cabayú de barro y junco, vena parda de La Paz,<br>
+        llevás el suspiro verde del monte que ya no está.<br>
+        Siete basura en tus aguas, plástico en tu camalotal,<br>
+        si el pueblo no te defiende, tu canto se apagará.”</em></p>
+      </div>
+
+      <p><strong>Cálculo Ambiental Actualizado:</strong> En una nueva jornada comunitaria en el Cabayú Cuatiá, se recolectaron <strong>320 kg de residuos</strong>. El <strong>75%</strong> correspondía a plásticos de un solo uso. ¿Cuántos kilogramos de plástico se extrajeron?<br>
+      <strong>Dígito 2:</strong> La cifra de las <strong>centenas</strong> del peso total de plástico recolectado (Ej: si fueran 240 kg, la centena es 2).</p>
+
+      <button class="option" onclick="answer(2,'1',this)">A) 180 kg de plástico → Dígito de las centenas: 1</button>
+      <button class="option" onclick="answer(2,'2',this)">B) 240 kg de plástico → Dígito de las centenas: 2</button>
+      <button class="option" onclick="answer(2,'3',this)">C) 300 kg de plástico → Dígito de las centenas: 3</button>
+      <button class="option" onclick="answer(2,'6',this)">D) 160 kg de plástico → Dígito de las centenas: 6</button>
+      <button class="option" onclick="answer(2,'9',this)">E) 290 kg de plástico → Dígito de las centenas: 9</button>
+      <div id="feedback2" class="feedback"></div>
+    </div>
+
+    <!-- ESTACIÓN 3 -->
+    <div id="station3" class="station card">
+      <h2>🏭 Estación 3: La Leyenda y los Efluentes</h2>
+
+      <div class="oral-box-top">
+        <strong>🗣️ Registro Escrito y Producción Oral Prioritaria:</strong>
+        Redacten en su borrador una propuesta de 2 oraciones para concientizar sobre el vertido de efluentes en el río Paraná y léanla de pie en voz alta a todo el equipo.
+      </div>
+
+      <p>Comprensión lectora de un relato que entrelaza la oralidad tradicional paceña con la realidad industrial contemporánea:</p>
+
+      <div class="clue">
+        Cuentan los antiguos pobladores del barrio Puerto que la Salamanca del río cuidaba a los cardúmenes. Hoy, una pequeña planta de procesamiento volcó efluentes sin tratar. El tanque de tratamiento tiene una capacidad de <strong>12.000 litros</strong>. Actualmente se encuentra al <strong>35% de su capacidad total</strong>. Para funcionar eficientemente y evitar el desborde hacia el río, debe alcanzar exactamente los <strong>10.000 litros</strong>.
+      </div>
+
+      <p><strong>Problema Matemático Actualizado:</strong> ¿Cuántos litros de agua efluente se necesitan agregar al tanque para alcanzar exactamente los 10.000 litros deseados?<br>
+      <strong>Dígito 3:</strong> La cifra de las <strong>unidades de mil</strong> del volumen de litros a agregar (Ej: si fueran 5.800 L, la unidad de mil es 5).</p>
+
+      <button class="option" onclick="answer(3,'4',this)">A) Faltan 4.200 L → Dígito de unidad de mil: 4</button>
+      <button class="option" onclick="answer(3,'6',this)">B) Faltan 6.500 L → Dígito de unidad de mil: 6</button>
+      <button class="option" onclick="answer(3,'7',this)">C) Faltan 7.800 L → Dígito de unidad de mil: 7</button>
+      <button class="option" onclick="answer(3,'5',this)">D) Hay 4.200 L en el tanque; se deben sumar 5.800 L para llegar a 10.000 L → Dígito: 5</button>
+      <button class="option" onclick="answer(3,'3',this)">E) Faltan 3.500 L → Dígito de unidad de mil: 3</button>
+      <div id="feedback3" class="feedback"></div>
+    </div>
+
+    <!-- ESTACIÓN 4 -->
+    <div id="station4" class="station card">
+      <h2>📰 Estación 4: Crónica del Parque Botánico Paceño</h2>
+
+      <div class="oral-box-top">
+        <strong>🗣️ Argumentación Verbal Prioritaria:</strong>
+        Un integrante debe explicar verbalmente al grupo por qué el Párrafo X cumple la función de conclusión periodística y cómo el dato cuantitativo del Párrafo Y sostiene esa tesis.
+      </div>
+
+      <p>Análisis de estructura argumentativa en un artículo periodístico escolar:</p>
+
+      <div class="clue">
+        <p><strong>Párrafo X:</strong> "En conclusión, reforestar el Parque Botánico de La Paz con especies nativas como el viraró, el timbó y el ingá es la única estrategia sostenible para fijar el suelo de las barrancas y frenar los desmoronamientos."</p>
+        <p><strong>Párrafo Y:</strong> "Un grupo de estudiantes midió que cada árbol adulto absorbe un promedio de <strong>150 litros de agua de escorrentía</strong> por día durante las tormentas de verano."</p>
+      </div>
+
+      <p><strong>Cálculo de Escorrentía Actualizado:</strong> Si el grupo logra plantar un lote ampliado de <strong>80 árboles nativos</strong> en la zona de riesgo de las barrancas, ¿cuántos litros de agua de lluvia absorberán en total por día?<br>
+      <strong>Dígito 4:</strong> La cifra de las <strong>unidades de mil</strong> del resultado numérico obtenido ($12.000	ext{ L} 
+ightarrow$ Unidad de mil: 2).</p>
+
+      <button class="option" onclick="answer(4,'8',this)">A) Absorberán 8.000 litros → Dígito de unidad de mil: 8</button>
+      <button class="option" onclick="answer(4,'2',this)">B) Absorberán 12.000 litros → Dígito de unidad de mil: 2</button>
+      <button class="option" onclick="answer(4,'1',this)">C) Absorberán 10.500 litros → Dígito de unidad de mil: 0</button>
+      <button class="option" onclick="answer(4,'9',this)">D) Absorberán 9.000 litros → Dígito de unidad de mil: 9</button>
+      <button class="option" onclick="answer(4,'6',this)">E) Absorberán 16.000 litros → Dígito de unidad de mil: 6</button>
+      <div id="feedback4" class="feedback"></div>
+    </div>
+
+    <!-- ESTACIÓN 5 -->
+    <div id="station5" class="station card">
+      <h2>♨️ Estación 5: El Circuito Termal y la Eficiencia del Agua</h2>
+
+      <div class="oral-box-top">
+        <strong>🗣️ Debate de Oralidad Prioritario:</strong>
+        Un vocero del equipo debe exponer en 30 segundos en voz alta por qué el uso sustentable del recurso termal beneficia tanto al desarrollo turístico como al equilibrio ambiental local de La Paz.
+      </div>
+
+      <p>Lectura analítica sobre el uso responsable de la cuenca subterránea en el complejo termal paceño:</p>
+
+      <div class="clue">
+        <p><strong>Boletín Técnico de Geotermia Paceña:</strong><br>
+        El Complejo Termal de La Paz extrae agua mineralizada de la cuenca profunda del acuífero. Para evitar el derroche y recircular el recurso hacia las piscinas de relajación, se instaló un caudalímetro inteligente. En un turno de 8 horas, el sistema registró un flujo total de <strong>50.000 litros</strong>. Un plan de optimización hídrica impulsado por la escuela técnica local logró reducir el desperdicio en un <strong>30%</strong> mediante la reparación de válvulas y filtros.</p>
+      </div>
+
+      <p><strong>Cálculo Hídrico Actualizado:</strong> ¿Cuántos litros de agua se lograron ahorrar durante las 8 horas gracias al plan de optimización?<br>
+      <strong>Dígito 5:</strong> La cifra de las <strong>decenas de mil</strong> del volumen de agua ahorrada ($15.000	ext{ L} 
+ightarrow$ Decena de mil: 1).</p>
+
+      <button class="option" onclick="answer(5,'3',this)">A) Ahorro de 30.000 L → Dígito de decena de mil: 3</button>
+      <button class="option" onclick="answer(5,'5',this)">B) Ahorro de 25.000 L → Dígito de decena de mil: 2</button>
+      <button class="option" onclick="answer(5,'1',this)">C) Ahorro de 15.000 L → Dígito de decena de mil: 1</button>
+      <button class="option" onclick="answer(5,'2',this)">D) Ahorro de 20.000 L → Dígito de decena de mil: 2</button>
+      <button class="option" onclick="answer(5,'4',this)">E) Ahorro de 40.000 L → Dígito de decena de mil: 4</button>
+      <div id="feedback5" class="feedback"></div>
+    </div>
+
+    <!-- ESTACIÓN 6 -->
+    <div id="station6" class="station card">
+      <h2>🦜 Estación 6: Mapeo y Huella de Biodiversidad en la Isla Curuzú Chalí</h2>
+
+      <div class="oral-box-top">
+        <strong>🗣️ Lectura Expresiva Prioritaria:</strong>
+        Lean en voz alta el informe sintéticamente y argumenten ante sus compañeros por qué la alteración de los humedales insulares afecta las rutas de migración en toda la cuenca del Plata.
+      </div>
+
+      <p>Comprensión de lectura científica sobre la avifauna y conservación insular en el Departamento La Paz:</p>
+
+      <div class="clue">
+        <p><strong>Estudio de Avistamiento en Curuzú Chalí:</strong><br>
+        La reserva provincial Curuzú Chalí, ubicada en el departamento La Paz, es un refugio crítico para especies como el chajá, la garza mora y el martín pescador. Un censo de avifauna registró un total de <strong>500 ejemplares de aves</strong> en un transecto de observación. El análisis taxonómico indicó que el <strong>42%</strong> de las aves avistadas pertenecía a especies migratorias que dependen exclusivamente de los humedales para su nidificación.</p>
+      </div>
+
+      <p><strong>Cálculo Biológico Actualizado:</strong> ¿Cuántas aves registradas en el censo corresponden a especies migratorias?<br>
+      <strong>Dígito 6:</strong> La cifra de las <strong>decenas</strong> del número total de aves migratorias ($210	ext{ aves} 
+ightarrow$ Decena: 1).</p>
+
+      <button class="option" onclick="answer(6,'4',this)">A) 240 aves migratorias → Dígito de las decenas: 4</button>
+      <button class="option" onclick="answer(6,'1',this)">B) 210 aves migratorias → Dígito de las decenas: 1</button>
+      <button class="option" onclick="answer(6,'8',this)">C) 180 aves migratorias → Dígito de las decenas: 8</button>
+      <button class="option" onclick="answer(6,'5',this)">D) 250 aves migratorias → Dígito de las decenas: 5</button>
+      <button class="option" onclick="answer(6,'2',this)">E) 220 aves migratorias → Dígito de las decenas: 2</button>
+      <div id="feedback6" class="feedback"></div>
+    </div>
+
+    <!-- ESTACIÓN 7 -->
+    <div id="station7" class="station card">
+      <h2>🌱 Estación 7: Manifiesto Ecológico Paceño</h2>
+
+      <div class="oral-box-top">
+        <strong>🗣️ Maratón de Lectura en Voz Alta Prioritaria:</strong>
+        Todo el equipo debe ponerse de pie y declamar a coro el Manifiesto con voz firme, potente y clara como requisito inicial de la estación.
+      </div>
+
+      <p>Estación de Cierre, Lectura Manifiesta y Síntesis Matemática:</p>
+
+      <div class="clue">
+        <p><em>“Nosotros, estudiantes de ESA N.º 3 "DR. ENRIQUE HUBER" de La Paz, proclamamos que el río Paraná no es un recurso infinito, sino un ser vivo que nos alimenta, nos da identidad y nos une. Proponemos reducir el consumo de plástico, proteger la reserva natural y promover la ciencia comunitaria en nuestras escuelas.”</em></p>
+      </div>
+
+      <p><strong>Cálculo Final del Proyecto Actualizado:</strong> Para implementar la red de contenedores de reciclaje en las escuelas secundarias de La Paz, se presupuestaron $90.000. Gracias a una colecta ambientalista se obtuvo un descuento del <strong>20%</strong>.<br>
+      ¿Cuál es el monto final a pagar por la red de contenedores?<br>
+      <strong>Dígito 7:</strong> La cifra de la <strong>decena de mil</strong> del precio final obtenido ($72.000 
+ightarrow$ Cifra de decena de mil: 7).</p>
+
+      <button class="option" onclick="answer(7,'1',this)">A) Monto final: $18.000 → Dígito de decena de mil: 1</button>
+      <button class="option" onclick="answer(7,'6',this)">B) Monto final: $68.000 → Dígito de decena de mil: 6</button>
+      <button class="option" onclick="answer(7,'7',this)">C) Monto final: $72.000 → Dígito de decena de mil: 7</button>
+      <button class="option" onclick="answer(7,'5',this)">D) Monto final: $75.000 → Dígito de decena de mil: 7</button>
+      <button class="option" onclick="answer(7,'8',this)">E) Monto final: $80.000 → Dígito de decena de mil: 8</button>
+      <div id="feedback7" class="feedback"></div>
+    </div>
+
+    <!-- CUADERNO DE CAMPO -->
+    <div class="card">
+      <h3>📓 Registro de Claves Paceñas</h3>
+      <div class="evidence">
+        <div class="badge">Estación 1: <strong id="digit1">—</strong></div>
+        <div class="badge">Estación 2: <strong id="digit2">—</strong></div>
+        <div class="badge">Estación 3: <strong id="digit3">—</strong></div>
+        <div class="badge">Estación 4: <strong id="digit4">—</strong></div>
+        <div class="badge">Estación 5: <strong id="digit5">—</strong></div>
+        <div class="badge">Estación 6: <strong id="digit6">—</strong></div>
+        <div class="badge">Estación 7: <strong id="digit7">—</strong></div>
+      </div>
+      <div style="margin-top:15px;">
+        <button id="btnPrev" class="secondary" onclick="previousStation()">← Estación Anterior</button>
+        <button id="btnNext" onclick="nextStation()">Siguiente Estación →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINAL -->
+  <section id="final" class="screen">
+    <div class="card" style="text-align:center;">
+      <div style="font-size:4rem">🔓🌊🎉🕊️</div>
+      <h1>¡SISTEMA DESBLOQUEADO!</h1>
+      <p class="subtitle">Han completado la Misión Paraná en la Maratón de Lectura Paceña</p>
+
+      <!-- NUEVO CÓDIGO MAESTRO REGENERADO -->
+      <div class="code-box">3 2 5 2 1 1 7</div>
+
+      <p class="success" style="font-size:1.2rem;"><strong>¡Felicitaciones a los investigadores!</strong></p>
+      <p>Demostraron un excelente nivel de comprensión lectora, capacidad de oratoria en equipo y destreza en matemática ambiental. El plan de protección integral del riacho Cabayú Cuatiá, la cuenca termal y las barrancas de La Paz ha sido activado con éxito.</p>
+
+      <button onclick="restartGame()">🔄 Reiniciar para otro equipo</button>
+    </div>
+  </section>
+
+  <!-- TIEMPO AGOTADO -->
+  <section id="timeout" class="screen">
+    <div class="card" style="text-align:center;">
+      <h1>¡TIEMPO AGOTADO EN LA ESTACIÓN!</h1>
+      <p style="font-size:1.1rem;">El tiempo de la maratón (30 minutos) ha concluido antes de descifrar todos los candados ambientales.</p>
+      <p>Revisen los textos, reorganicen la lectura en voz alta y vuelvan a intentarlo.</p>
+      <button onclick="restartGame()">🔄 Reintentar Escape Room</button>
+    </div>
+  </section>
+
+</div>
+
+<script>
+let currentStation = 1;
+let digits = [null, null, null, null, null, null, null];
+let timeLeft = 30 * 60; // 30 minutos
+let timerInterval = null;
+let cooldownTimer = null;
+
+// NUEVAS RESPUESTAS CORRECTAS REORDENADAS Y REDISTRIBUIDAS
+const correctAnswers = {
+  1: '3',
+  2: '2',
+  3: '5',
+  4: '2',
+  5: '1',
+  6: '1',
+  7: '7'
+};
+
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  scrollToTop();
+}
+
+function startGame() {
+  timeLeft = 30 * 60;
+  currentStation = 1;
+  digits = [null, null, null, null, null, null, null];
+  for(let i=1; i<=7; i++) {
+    document.getElementById('digit' + i).textContent = '—';
+    document.getElementById('feedback' + i).innerHTML = '';
+  }
+  document.getElementById('alarmOverlay').classList.remove('active');
+  if(cooldownTimer) clearInterval(cooldownTimer);
+
+  updateUI();
+  showScreen('game');
+  clearInterval(timerInterval);
+  timerInterval = setInterval(tick, 1000);
+}
+
+function tick() {
+  timeLeft--;
+  updateTimer();
+  if (timeLeft <= 0) {
+    clearInterval(timerInterval);
+    showScreen('timeout');
+  }
+}
+
+function updateTimer() {
+  const min = Math.floor(timeLeft / 60).toString().padStart(2,'0');
+  const sec = (timeLeft % 60).toString().padStart(2,'0');
+  document.getElementById('floatingTimer').textContent = `${min}:${sec}`;
+}
+
+function answer(station, value, btn) {
+  const feedback = document.getElementById('feedback' + station);
+  const buttons = document.querySelectorAll('#station' + station + ' .option');
+
+  buttons.forEach(b => b.classList.remove('correct','wrong','selected'));
+
+  if (value === correctAnswers[station]) {
+    btn.classList.add('correct');
+    digits[station - 1] = value;
+    document.getElementById('digit' + station).textContent = value;
+    feedback.innerHTML = '<span class="success">✓ ¡Excelente cálculo y análisis! Dígito ' + value + ' registrado en el cuaderno.</span>';
+  } else {
+    btn.classList.add('wrong');
+    feedback.innerHTML = '<span class="fail">✗ Respuesta incorrecta.</span>';
+    triggerSystemLockout();
+  }
+}
+
+function triggerSystemLockout() {
+  const overlay = document.getElementById('alarmOverlay');
+  const overlayTimer = document.getElementById('overlayTimer');
+  
+  // Deshabilitar todos los botones de la aplicación
+  document.querySelectorAll('button').forEach(b => b.disabled = true);
+
+  // Mostrar cartel de alarma superpuesto
+  overlay.classList.add('active');
+
+  let remaining = 20;
+  overlayTimer.textContent = remaining;
+
+  if (cooldownTimer) clearInterval(cooldownTimer);
+
+  cooldownTimer = setInterval(() => {
+    remaining--;
+    overlayTimer.textContent = remaining;
+    if (remaining <= 0) {
+      clearInterval(cooldownTimer);
+      overlay.classList.remove('active');
+      document.querySelectorAll('button').forEach(b => b.disabled = false);
+    }
+  }, 1000);
+}
+
+function nextStation() {
+  if (currentStation < 7) {
+    currentStation++;
+    updateUI();
+    scrollToTop();
+  } else if (digits.every(d => d !== null)) {
+    clearInterval(timerInterval);
+    showScreen('final');
+  } else {
+    alert('Aún faltan resolver una o más estaciones para completar el código maestro.');
+  }
+}
+
+function previousStation() {
+  if (currentStation > 1) {
+    currentStation--;
+    updateUI();
+    scrollToTop();
+  }
+}
+
+function updateUI() {
+  document.querySelectorAll('.station').forEach(s => s.classList.remove('active'));
+  document.getElementById('station' + currentStation).classList.add('active');
+
+  document.getElementById('stationLabel').textContent = `Estación ${currentStation} de 7`;
+  document.getElementById('progress').style.width = ((currentStation / 7) * 100) + '%';
+
+  updateTimer();
+}
+
+function restartGame() {
+  clearInterval(timerInterval);
+  showScreen('start');
+}
+</script>
+</body>
+</html>
